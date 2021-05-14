@@ -1,8 +1,26 @@
-from flask import request
-from flask_restplus import Api, Resource
+from flask import request, Flask
+from flask_restplus import Api, Resource, fields
 import datetime
 from dbconfig import mydb
-from appconfig import api, todo, app, Api
+from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_cors import CORS
+
+app = Flask(__name__)
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
+app.wsgi_app = ProxyFix(app.wsgi_app)
+api = Api(app, version='1.0', title='TodoMVC API',
+          description='A simple TodoMVC API',
+          )
+
+Api = api.namespace('todos', description='TODO operations')
+
+todo = api.model('Todo', {
+    'id': fields.Integer(readonly=True, description='The task unique identifier'),
+    'task': fields.String(required=True, description='The task details'),
+    'due_by': fields.Date(required=False, description='Due by Date'),
+    'statuss': fields.String(required=False, description='Status of the task')
+})
 
 
 class TodoDAO(object):
@@ -36,6 +54,7 @@ class TodoDAO(object):
         api.abort(404, "Todo {} doesn't exist".format(id))
 
     def create(self, data, id=None):
+        print(data)
         todo = data
         if(todo.get('id') == None and id == None):
             todo['id'] = self.counter = self.counter + 1
@@ -96,6 +115,7 @@ class TodoList(Resource):
     @Api.marshal_with(todo, code=201)
     def post(self):
         '''Create a new task'''
+        print(api)
         DAO.create(api.payload)
         return DAO.todos
 
@@ -178,6 +198,26 @@ class TodoGetFinished(Resource):
             if stat == 'finished':
                 res.append(i)
         return res
+
+
+@Api.route('/authenticate')
+@Api.doc(params={'username': 'Your username', 'password': 'Your password'})
+class Authenticate(Resource):
+    '''Authenticate users'''
+
+    def post(self):
+        username = request.args.get('username')
+        password = request.args.get('password')
+        mycur = mydb.cursor()
+        mycur.execute('select * from users')
+        res = mycur.fetchall()
+        for i in res:
+            if i[1] == username and i[2] == password:
+                if i[1][0] == 'a':
+                    return 'Admin'
+                else:
+                    return 'User'
+        return 'Failure'
 
 
 if __name__ == '__main__':

@@ -118,7 +118,7 @@ class TodoList(Resource):
 
 
 @Api.route('/<int:id>')
-@Api.respoApie(404, 'Todo not found')
+@Api.response(404, 'Todo not found')
 @Api.param('id', 'The task identifier')
 class TodoAdd(Resource):
     '''Show a single todo item and lets you delete them'''
@@ -129,7 +129,7 @@ class TodoAdd(Resource):
         return DAO.get(id)
 
     @Api.doc('delete_todo')
-    @Api.respoApie(204, 'Todo deleted')
+    @Api.response(204, 'Todo deleted')
     def delete(self, id):
         '''Delete a task given its identifier'''
         res = DAO.delete(id)

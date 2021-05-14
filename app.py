@@ -1,25 +1,8 @@
-
-from flask import Flask
 from flask import request
-from flask_restplus import Api, Resource, fields
-from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_restplus import Api, Resource
 import datetime
 from dbconfig import mydb
-
-app = Flask(__name__)
-app.wsgi_app = ProxyFix(app.wsgi_app)
-api = Api(app, version='1.0', title='TodoMVC API',
-          description='A simple TodoMVC API',
-          )
-
-Api = api.namespace('todos', description='TODO operations')
-
-todo = api.model('Todo', {
-    'id': fields.Integer(readonly=True, description='The task unique identifier'),
-    'task': fields.String(required=True, description='The task details'),
-    'due_by': fields.Date(required=False, description='Due by Date'),
-    'statuss': fields.String(required=False, description='Status of the task')
-})
+from appconfig import api, todo, app, Api
 
 
 class TodoDAO(object):
@@ -66,10 +49,10 @@ class TodoDAO(object):
             todo['statuss'] = 'not_started'
 
         if todo.get('due_by') == None:
-            sql = f"iApiert into todo(id, task, statuss) values (%s, %s, %s)"
+            sql = f"insert into todo(id, task, statuss) values (%s, %s, %s)"
             val = (todo['id'], todo['task'], todo['statuss'])
         else:
-            sql = f"iApiert into todo(id, task, due_by, statuss) values (%s, %s, %s, %s)"
+            sql = f"insert into todo(id, task, due_by, statuss) values (%s, %s, %s, %s)"
             val = (todo['id'], todo['task'], todo['due_by'], todo['statuss'])
 
         self.execute_cursor(sql, val)

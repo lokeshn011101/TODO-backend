@@ -3,12 +3,12 @@ from flask_restplus import Api, Resource, fields
 import datetime
 from dbconfig import mydb
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 
 app = Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
-app.wsgi_app = ProxyFix(app.wsgi_app)
+# app.wsgi_app = ProxyFix(app.wsgi_app)
 api = Api(app, version='1.0', title='TodoMVC API',
           description='A simple TodoMVC API',
           )
@@ -45,6 +45,7 @@ class TodoDAO(object):
         for i in res:
             curt = {"id": i[0], "task": i[1], "due_by": i[2], "statuss": i[3]}
             todos.append(curt)
+        self.counter = len(todos)
         return todos
 
     def get(self, id):
@@ -67,7 +68,7 @@ class TodoDAO(object):
         if todo.get('statuss') == None:
             todo['statuss'] = 'not_started'
 
-        if todo.get('due_by') == None:
+        if todo.get('due_by') == None or todo.get('due_by') == '':
             sql = f"insert into todo(id, task, statuss) values (%s, %s, %s)"
             val = (todo['id'], todo['task'], todo['statuss'])
         else:

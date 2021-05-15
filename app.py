@@ -49,6 +49,7 @@ class TodoDAO(object):
         return todos
 
     def get(self, id):
+        self.todos = self.fetch_data()
         for todo in self.todos:
             if todo['id'] == id:
                 return todo
@@ -223,3 +224,6 @@ class Authenticate(Resource):
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
+# heroku logs -a todo-backend-lokesh --tail

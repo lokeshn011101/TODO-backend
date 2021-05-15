@@ -1,14 +1,15 @@
 from flask import request, Flask
 from flask_restplus import Api, Resource, fields
 import datetime
-from dbconfig import mydb
+from dbconfig import MySQLDatabase
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask_cors import CORS, cross_origin
+from flask_cors import CORS
+from model import TodoDAO
 
 app = Flask(__name__)
 cors = CORS(app, resources={r'/*': {'origins': '*'}})
 app.config['CORS_HEADERS'] = 'Content-Type'
-# app.wsgi_app = ProxyFix(app.wsgi_app)
+app.wsgi_app = ProxyFix(app.wsgi_app)
 api = Api(app, version='1.0', title='TodoMVC API',
           description='A simple TodoMVC API',
           )
@@ -23,93 +24,6 @@ todo = api.model('Todo', {
 })
 
 
-class TodoDAO(object):
-    def __init__(self):
-        self.todos = self.fetch_data()
-        self.counter = len(self.todos)
-
-    def execute_cursor(self, sql, val=None):
-        mydb.reconnect()
-        self.todos = self.fetch_data()
-        mycur = mydb.cursor()
-        if val != None:
-            mycur.execute(sql, val)
-        else:
-            mycur.execute(sql)
-        mydb.commit()
-
-    def fetch_data(self):
-        mydb.reconnect()
-        todos = []
-        mycur = mydb.cursor()
-        sql = "select * from todo"
-        mycur.execute(sql)
-        res = mycur.fetchall()
-        for i in res:
-            curt = {"id": i[0], "task": i[1], "due_by": i[2], "statuss": i[3]}
-            todos.append(curt)
-        self.counter = len(todos)
-        return todos
-
-    def get(self, id):
-        mydb.reconnect()
-        self.todos = self.fetch_data()
-        for todo in self.todos:
-            if todo['id'] == id:
-                return todo
-        api.abort(404, "Todo {} doesn't exist".format(id))
-
-    def create(self, data, id=None):
-        mydb.reconnect()
-        self.todos = self.fetch_data()
-        print(data)
-        todo = data
-        if(todo.get('id') == None and id == None):
-            todo['id'] = self.counter = self.counter + 1
-        elif(todo.get('id') == None and id != None):
-            todo['id'] = id
-
-        sql = ""
-        val = ()
-
-        if todo.get('statuss') == None:
-            todo['statuss'] = 'not_started'
-
-        if todo.get('due_by') == None or todo.get('due_by') == '':
-            sql = f"insert into todo(id, task, statuss) values (%s, %s, %s)"
-            val = (todo['id'], todo['task'], todo['statuss'])
-        else:
-            sql = f"insert into todo(id, task, due_by, statuss) values (%s, %s, %s, %s)"
-            val = (todo['id'], todo['task'], todo['due_by'], todo['statuss'])
-
-        self.execute_cursor(sql, val)
-        self.todos = self.fetch_data()
-
-        return self.todos
-
-    def update(self, id, data):
-        mydb.reconnect()
-        self.todos = self.fetch_data()
-        self.delete(id)
-        return self.create(data, id)
-
-    def delete(self, id):
-        mydb.reconnect()
-        self.todos = self.fetch_data()
-        flag = 0
-        for i in self.todos:
-            if i['id'] == id:
-                flag = 1
-                break
-        if flag == 1:
-            sql = f"DELETE FROM todo WHERE id = {id}"
-            self.execute_cursor(sql)
-            self.todos = self.fetch_data()
-            return {"message": "Successfully Deleted!"}
-        else:
-            return {"message": "No todo present!"}
-
-
 DAO = TodoDAO()
 
 
@@ -120,16 +34,15 @@ class TodoList(Resource):
     @Api.marshal_list_with(todo)
     def get(self):
         '''List all tasks'''
-        return DAO.todos
+        return DAO.todos[0]
 
     @Api.doc('create_todo')
     @Api.expect(todo)
     @Api.marshal_with(todo, code=201)
     def post(self):
         '''Create a new task'''
-        print(api)
         DAO.create(api.payload)
-        return DAO.todos
+        return DAO.todos[0]
 
 
 @Api.route('/<int:id>')
@@ -147,7 +60,7 @@ class TodoAdd(Resource):
     @Api.response(204, 'Todo deleted')
     def delete(self, id):
         '''Delete a task given its identifier'''
-        res = DAO.delete(id)
+        res, todos = DAO.delete(id)
         if res['message'] == 'No todo present!':
             return '', 406
         else:
@@ -176,7 +89,7 @@ class TodoGetOverdue(Resource):
         month = int(dt[1])
         day = int(dt[2])
         gdate = datetime.date(year, month, day)
-        for i in DAO.todos:
+        for i in DAO.todos[0]:
             date = i['due_by']
             if date == gdate:
                 res.append(i)
@@ -191,7 +104,8 @@ class TodoGetOverdue(Resource):
     def get(self):
         '''Fetch a given resource with status as overdue'''
         res = []
-        for i in DAO.todos:
+        print(DAO.todos[0])
+        for i in DAO.todos[0]:
             date = i['due_by']
             if date != None and date < datetime.date.today():
                 res.append(i)
@@ -206,7 +120,7 @@ class TodoGetFinished(Resource):
     def get(self):
         '''Fetch a given resource with status as finished'''
         res = []
-        for i in DAO.todos:
+        for i in DAO.todos[0]:
             stat = i['statuss']
             if stat == 'finished':
                 res.append(i)
@@ -219,11 +133,14 @@ class Authenticate(Resource):
     '''Authenticate users'''
 
     def post(self):
-        print(request.get_json())
         q = request.get_json()
         username = q['params']['username']
         password = q['params']['password']
-        mycur = mydb.cursor()
+        # username = request.args.get('username')
+        # password = request.args.get('password')
+        obj = MySQLDatabase()
+        obj.connectDB()
+        mycur = obj.mydb.cursor()
         print(username, password)
         mycur.execute('select * from users')
         res = mycur.fetchall()
@@ -233,6 +150,7 @@ class Authenticate(Resource):
                     return 'Admin'
                 else:
                     return 'User'
+        obj.disconnectDB()
         return 'Failure'
 
 

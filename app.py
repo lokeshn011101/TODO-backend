@@ -212,9 +212,11 @@ class Authenticate(Resource):
     '''Authenticate users'''
 
     def post(self):
-        username = request.args.get('username')
-        password = request.args.get('password')
+        queryparams = request.get_json()
+        username = queryparams['params']['username']
+        password = queryparams['params']['password']
         mycur = mydb.cursor()
+        print(username, password)
         mycur.execute('select * from users')
         res = mycur.fetchall()
         for i in res:

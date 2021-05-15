@@ -29,6 +29,7 @@ class TodoDAO(object):
         self.counter = len(self.todos)
 
     def execute_cursor(self, sql, val=None):
+        self.todos = self.fetch_data()
         mycur = mydb.cursor()
         if val != None:
             mycur.execute(sql, val)
@@ -56,6 +57,7 @@ class TodoDAO(object):
         api.abort(404, "Todo {} doesn't exist".format(id))
 
     def create(self, data, id=None):
+        self.todos = self.fetch_data()
         print(data)
         todo = data
         if(todo.get('id') == None and id == None):
@@ -82,10 +84,12 @@ class TodoDAO(object):
         return self.todos
 
     def update(self, id, data):
+        self.todos = self.fetch_data()
         self.delete(id)
         return self.create(data, id)
 
     def delete(self, id):
+        self.todos = self.fetch_data()
         flag = 0
         for i in self.todos:
             if i['id'] == id:

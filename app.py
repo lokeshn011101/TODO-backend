@@ -29,6 +29,7 @@ class TodoDAO(object):
         self.counter = len(self.todos)
 
     def execute_cursor(self, sql, val=None):
+        mydb.reconnect()
         self.todos = self.fetch_data()
         mycur = mydb.cursor()
         if val != None:
@@ -38,6 +39,7 @@ class TodoDAO(object):
         mydb.commit()
 
     def fetch_data(self):
+        mydb.reconnect()
         todos = []
         mycur = mydb.cursor()
         sql = "select * from todo"
@@ -50,6 +52,7 @@ class TodoDAO(object):
         return todos
 
     def get(self, id):
+        mydb.reconnect()
         self.todos = self.fetch_data()
         for todo in self.todos:
             if todo['id'] == id:
@@ -57,6 +60,7 @@ class TodoDAO(object):
         api.abort(404, "Todo {} doesn't exist".format(id))
 
     def create(self, data, id=None):
+        mydb.reconnect()
         self.todos = self.fetch_data()
         print(data)
         todo = data
@@ -84,11 +88,13 @@ class TodoDAO(object):
         return self.todos
 
     def update(self, id, data):
+        mydb.reconnect()
         self.todos = self.fetch_data()
         self.delete(id)
         return self.create(data, id)
 
     def delete(self, id):
+        mydb.reconnect()
         self.todos = self.fetch_data()
         flag = 0
         for i in self.todos:
@@ -164,6 +170,7 @@ class TodoGetOverdue(Resource):
         '''Fetch a given resource which are due to be finished on this date'''
         res = []
         gdate = request.args.get('due_date')
+        print(gdate)
         dt = gdate.split('-')
         year = int(dt[0])
         month = int(dt[1])
@@ -186,7 +193,7 @@ class TodoGetOverdue(Resource):
         res = []
         for i in DAO.todos:
             date = i['due_by']
-            if date < datetime.date.today():
+            if date != None and date < datetime.date.today():
                 res.append(i)
         return res
 
@@ -212,9 +219,10 @@ class Authenticate(Resource):
     '''Authenticate users'''
 
     def post(self):
-        queryparams = request.get_json()
-        username = queryparams['params']['username']
-        password = queryparams['params']['password']
+        print(request.get_json())
+        q = request.get_json()
+        username = q['params']['username']
+        password = q['params']['password']
         mycur = mydb.cursor()
         print(username, password)
         mycur.execute('select * from users')

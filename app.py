@@ -6,7 +6,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_cors import CORS, cross_origin
 
 app = Flask(__name__)
-cors = CORS(app)
+cors = CORS(app, resources={r'/*': {'origins': '*'}})
 app.config['CORS_HEADERS'] = 'Content-Type'
 # app.wsgi_app = ProxyFix(app.wsgi_app)
 api = Api(app, version='1.0', title='TodoMVC API',

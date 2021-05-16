@@ -24,7 +24,6 @@ class TodoDAO(object):
     def update(self, id, data):
         self.cruddb.update(id, data)
         self.todos = self.cruddb.fetch_data()
-        return self.todos
 
     def delete(self, id):
         res = self.cruddb.delete(id)

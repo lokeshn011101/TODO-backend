@@ -54,7 +54,10 @@ class TodoAdd(Resource):
     @Api.marshal_with(todo)
     def get(self, id):
         '''Fetch a given resource'''
-        return DAO.get(id)
+        for i in DAO.todos[0]:
+            if i['id'] == id:
+                return i
+        return Api.abort(404)
 
     @Api.doc('delete_todo')
     @Api.response(204, 'Todo deleted')
@@ -67,10 +70,15 @@ class TodoAdd(Resource):
             return '', 204
 
     @Api.expect(todo)
-    @Api.marshal_with(todo)
+    @Api.marshal_with(todo, code=201)
     def put(self, id):
         '''Update a task given its identifier'''
-        return DAO.update(id, api.payload)
+        print(id, api.payload)
+        res = DAO.update(id, api.payload)
+        if res == "Failure":
+            Api.abort(400)
+        else:
+            return res
 
 
 @Api.route('/due')
@@ -83,7 +91,6 @@ class TodoGetOverdue(Resource):
         '''Fetch a given resource which are due to be finished on this date'''
         res = []
         gdate = request.args.get('due_date')
-        print(gdate)
         dt = gdate.split('-')
         year = int(dt[0])
         month = int(dt[1])
@@ -104,10 +111,9 @@ class TodoGetOverdue(Resource):
     def get(self):
         '''Fetch a given resource with status as overdue'''
         res = []
-        print(DAO.todos[0])
         for i in DAO.todos[0]:
             date = i['due_by']
-            if date != None and date < datetime.date.today():
+            if date != None and date.day < datetime.date.today().day and date.month <= datetime.date.today().month and date.year <= datetime.date.today().year:
                 res.append(i)
         return res
 
@@ -131,7 +137,7 @@ class TodoGetFinished(Resource):
 @Api.doc(params={'username': 'Your username', 'password': 'Your password'})
 class Authenticate(Resource):
     '''Authenticate users'''
-
+    @Api.doc('authenticate_users')
     def post(self):
         q = request.get_json()
         username = q['params']['username']

@@ -62,10 +62,25 @@ class CRUDdb():
         return todos
 
     def update(self, id, data):
-        self.mydb.connectDB()
-        self.delete(id)
-        self.mydb.disconnectDB()
-        return self.insert(data)
+        sql = ''
+        val = ()
+        print(data)
+        if data.get('task') != None:
+            sql = f'update todo set task=%s where id=%s'
+            val = (data['task'], id)
+            self.execute_cursor(sql, val)
+            return "Success"
+        if data.get('statuss') != None:
+            sql = f'update todo set statuss=%s where id=%s'
+            val = (data['statuss'], id)
+            self.execute_cursor(sql, val)
+            return "Success"
+        if data.get('due_by') != None:
+            sql = f'update todo set due_by=%s where id=%s'
+            val = (data['due_by'], id)
+            self.execute_cursor(sql, val)
+            return "Success"
+        return "Failure"
 
     def delete(self, id):
         todos, length = self.fetch_data()
@@ -75,7 +90,7 @@ class CRUDdb():
                 flag = 1
                 break
         if flag == 1:
-            sql = f"DELETE FROM todo WHERE id = {id}"
+            sql = f"delete from todo where id = {id}"
             self.execute_cursor(sql)
             todos, length = self.fetch_data()
             return {"message": "Successfully Deleted!"}
